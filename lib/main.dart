@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'providers/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:student_task_tracker/splash_screen.dart';
+import 'package:student_task_tracker/providers/noteprovider.dart';
 import 'package:student_task_tracker/providers/language_font_provider.dart';
 
 void main() {
@@ -12,6 +13,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => TaskProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LanguageFontProvider()),
+        ChangeNotifierProvider(create: (_) => NoteProvider()),
       ],
       child: const MyApp(),
     ),
@@ -27,8 +29,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: ' Daily Task Manager',
-      themeMode: themeProvider.currentTheme, // Set theme mode based on provider
-      theme: ThemeData.light(), // Light theme
+      themeMode: themeProvider.currentTheme,
+      theme: ThemeData.light(),
       darkTheme: ThemeData.dark(),
       home: SplashScreen(),
     );

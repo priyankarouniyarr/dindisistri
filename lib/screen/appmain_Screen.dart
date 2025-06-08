@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:student_task_tracker/screen/calebndra.dart';
 import 'package:student_task_tracker/screen/home_screen.dart';
-import 'package:student_task_tracker/screen/taskscheduleScreen.dart';
+import 'package:student_task_tracker/screen/noteappscreen.dart';
 
 class AppMainScreen extends StatefulWidget {
   const AppMainScreen({super.key});
@@ -13,7 +13,7 @@ class AppMainScreen extends StatefulWidget {
 class _AppMainScreenState extends State<AppMainScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> pages = [HomeScreen(), Taskschedulescreen(), Calebndra()];
+  final List<Widget> pages = [HomeScreen(), NoteAppScreen()];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -93,39 +93,38 @@ class _AppMainScreenState extends State<AppMainScreen> {
                             : Colors.transparent,
                   ),
                   child: Icon(
-                    _selectedIndex == 1
-                        ? Icons.schedule
-                        : Icons.schedule_outlined,
+                    _selectedIndex == 1 ? Icons.note : Icons.note_outlined,
                     size: 24,
                   ),
                 ),
-                label: "Schedule",
+                label: "Note",
               ),
-              BottomNavigationBarItem(
-                icon: Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color:
-                        _selectedIndex == 2
-                            ? Theme.of(
-                              context,
-                            ).colorScheme.primary.withOpacity(0.2)
-                            : Colors.transparent,
-                  ),
-                  child: Icon(
-                    _selectedIndex == 2
-                        ? Icons.calendar_month
-                        : Icons.calendar_month_outlined,
-                    size: 24,
-                  ),
-                ),
-                label: "Calendra",
-              ),
+              //BottomNavigationBarItem(
+              //       icon: Container(
+              //         padding: EdgeInsets.all(8),
+              //         decoration: BoxDecoration(
+              //           borderRadius: BorderRadius.circular(12),
+              //           color:
+              //               _selectedIndex == 2
+              //                   ? Theme.of(
+              //                     context,
+              //                   ).colorScheme.primary.withOpacity(0.2)
+              //                   : Colors.transparent,
+              //         ),
+              //         child: Icon(
+              //           _selectedIndex == 2
+              //               ? Icons.calendar_month
+              //               : Icons.calendar_month_outlined,
+              //           size: 24,
+              //         ),
+              //       ),
+              //       label: "Calendra",
+              //     ),
             ],
           ),
         ),
       ),
+
       body: pages[_selectedIndex],
     );
   }

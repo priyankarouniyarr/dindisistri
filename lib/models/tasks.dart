@@ -2,23 +2,23 @@ class Task {
   final String title;
   final String description;
   final int priority;
-  //final bool completed; // Add this line
+  final bool completed;
   final DateTime deadline;
 
   Task({
     required this.title,
     required this.description,
     required this.priority,
-    // required this.completed, // Add this line
+    required this.completed,
     required this.deadline,
   });
 
   factory Task.fromJson(Map<String, dynamic> json) {
     return Task(
       title: json['title'],
-      priority: json['priority'],
       description: json['description'],
-      //  completed: json['completed'] ?? false, // Add this line
+      priority: json['priority'],
+      completed: json['completed'] ?? false,
       deadline: DateTime.parse(json['deadline']),
     );
   }
@@ -27,7 +27,7 @@ class Task {
     'title': title,
     'description': description,
     'priority': priority,
-    //'completed': completed, // Add this line
+    'completed': completed,
     'deadline': deadline.toIso8601String(),
   };
 }

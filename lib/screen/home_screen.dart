@@ -70,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final descCtrl = TextEditingController(text: task?.description ?? '');
     int selectedPriority = task?.priority ?? 1;
     DateTime selectedDate = task?.deadline ?? DateTime.now();
+    bool isCompleted = task?.completed ?? false;
     final languageProvider = Provider.of<LanguageFontProvider>(
       context,
       listen: false,
@@ -319,6 +320,24 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 16),
+                          CheckboxListTile(
+                            title: Text(
+                              'Completed',
+                              style: TextStyle(
+                                fontFamily:
+                                    googleFontOptions[languageProvider
+                                            .selectedFont]!()
+                                        .fontFamily,
+                              ),
+                            ),
+                            value: isCompleted,
+                            onChanged:
+                                (value) => setState(
+                                  () => isCompleted = value ?? false,
+                                ),
+                            activeColor: Theme.of(context).colorScheme.primary,
+                          ),
                           const SizedBox(height: 24),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.end,
@@ -366,6 +385,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     title: titleCtrl.text.trim(),
                                     description: descCtrl.text.trim(),
                                     priority: selectedPriority,
+                                    completed: isCompleted,
                                     deadline: selectedDate,
                                   );
 
@@ -472,7 +492,13 @@ class _HomeScreenState extends State<HomeScreen> {
         index,
         (context, animation) => SizeTransition(
           sizeFactor: animation,
-          child: TaskTile(task: removedTask, onDelete: () {}, onEdit: () {}),
+          child: TaskTile(
+            task: removedTask,
+            onDelete: () {},
+            onEdit: () {},
+            onToggleComplete: () {},
+            index: 1,
+          ),
         ),
         duration: const Duration(milliseconds: 300),
       );
@@ -575,10 +601,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       controller: _searchController,
                       decoration: InputDecoration(
                         hintText: 'Search by title...',
-                        prefixIcon: Icon(Icons.search),
-                        contentPadding: EdgeInsets.symmetric(
+                        prefixIcon: const Icon(Icons.search),
+                        contentPadding: const EdgeInsets.symmetric(
                           vertical: 0,
-                          horizontal: 5,
+                          horizontal: 12,
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(20),
@@ -591,7 +617,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Categories(context, provider, languageProvider),
                   const SizedBox(width: 10),
                 ],
@@ -606,12 +632,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             const Icon(
                               Icons.task_alt,
-                              size: 80,
+                              size: 80.0,
                               color: Colors.grey,
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              'No tasks yet! Add one to get started.',
+                              'No tasks available! Add one to begin.',
                               style: Theme.of(
                                 context,
                               ).textTheme.bodyLarge?.copyWith(
@@ -631,8 +657,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.all(16),
                         initialItemCount: provider.tasks.length,
                         itemBuilder: (context, index, animation) {
-                          if (index >= provider.tasks.length)
+                          if (index >= provider.tasks.length) {
                             return const SizedBox.shrink();
+                          }
                           final task = provider.tasks[index];
                           return SlideTransition(
                             position: Tween<Offset>(
@@ -671,9 +698,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
-                                    borderRadius: BorderRadius.circular(20),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: TaskTile(
+                                    index: index,
                                     task: task,
                                     onDelete: () => _handleDelete(index, task),
                                     onEdit:
@@ -681,6 +709,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                           task: task,
                                           index: index,
                                         ),
+                                    onToggleComplete: () {
+                                      provider.toggleCompleteTask(index);
+                                      _listKey.currentState?.setState(() {});
+                                    },
                                   ),
                                 ),
                               ),
@@ -697,8 +729,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: FloatingActionButton(
           onPressed: () => showTaskDialog(),
           child: const Icon(Icons.add),
-          backgroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          foregroundColor: Colors.white,
           shape: const CircleBorder(),
           elevation: 4,
         ),

@@ -20,13 +20,17 @@ String getPriorityLabel(int priority) {
 
 class TaskTile extends StatelessWidget {
   final Task task;
+  final int index;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+  final VoidCallback onToggleComplete;
 
   const TaskTile({
     required this.task,
+    required this.index,
     required this.onDelete,
     required this.onEdit,
+    required this.onToggleComplete,
     super.key,
   });
 
@@ -35,15 +39,13 @@ class TaskTile extends StatelessWidget {
     final languageProvider = Provider.of<LanguageFontProvider>(context);
 
     return Dismissible(
-      key: Key(task.title?.toString() ?? ''),
+      key: Key(task.title.toString()),
       direction: DismissDirection.endToStart,
-
       background: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         alignment: Alignment.centerRight,
         decoration: BoxDecoration(
           color: Colors.red,
-          border: Border.all(color: Colors.redAccent, width: 2),
           borderRadius: BorderRadius.circular(20),
         ),
         child: const Icon(Icons.delete, color: Colors.white),
@@ -52,7 +54,14 @@ class TaskTile extends StatelessWidget {
         onDelete();
       },
       child: Card(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 0,
         child: ListTile(
+          leading: Checkbox(
+            value: task.completed,
+            onChanged: (value) => onToggleComplete(),
+            activeColor: Theme.of(context).colorScheme.primary,
+          ),
           title: Text(
             task.title,
             style: TextStyle(
@@ -61,13 +70,14 @@ class TaskTile extends StatelessWidget {
               fontFamily:
                   googleFontOptions[languageProvider.selectedFont]!()
                       .fontFamily,
+              decoration: task.completed ? TextDecoration.lineThrough : null,
             ),
           ),
           subtitle: RichText(
             text: TextSpan(
               style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
+                fontSize: 14,
+                color: Colors.grey[600],
                 fontFamily:
                     googleFontOptions[languageProvider.selectedFont]!()
                         .fontFamily,
@@ -80,15 +90,13 @@ class TaskTile extends StatelessWidget {
                 TextSpan(
                   text:
                       'Deadline: ${task.deadline.toLocal().toString().split(" ")[0]}',
-                  style: const TextStyle(
-                    color: Color.fromARGB(255, 98, 95, 247),
-                  ),
+                  style: const TextStyle(color: Colors.blueAccent),
                 ),
               ],
             ),
           ),
           trailing: IconButton(
-            icon: Icon(Icons.view_agenda, color: Colors.deepPurple),
+            icon: const Icon(Icons.view_agenda, color: Colors.deepPurple),
             onPressed: onEdit,
           ),
         ),

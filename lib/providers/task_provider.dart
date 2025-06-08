@@ -3,23 +3,27 @@ import 'package:flutter/material.dart';
 import 'package:student_task_tracker/models/tasks.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum TaskFilter { all, completed, pending }
+
 class TaskProvider extends ChangeNotifier {
   List<Task> _tasks = [];
   List<Task> _filteredTasks = [];
+  TaskFilter _currentFilter = TaskFilter.all;
+  String _searchQuery = '';
 
   List<Task> get tasks =>
-      _filteredTasks.isNotEmpty || _searchQuery.isNotEmpty
+      _filteredTasks.isNotEmpty ||
+              _searchQuery.isNotEmpty ||
+              _currentFilter != TaskFilter.all
           ? _filteredTasks
           : _tasks;
-
-  String _searchQuery = ''; // Track current search query
 
   Future<void> loadTasks() async {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getStringList('tasks') ?? [];
     try {
       _tasks = data.map((e) => Task.fromJson(json.decode(e))).toList();
-      _filteredTasks = List.from(_tasks); // Initialize with all tasks
+      _applyFilterAndSearch();
     } catch (e) {
       print("Error loading tasks: $e");
       _tasks = [];
@@ -35,8 +39,8 @@ class TaskProvider extends ChangeNotifier {
   }
 
   void addTask(Task task) {
-    _tasks.add(task);
-    searchTasks(_searchQuery); // Reapply search filter after adding
+    tasks.add(task);
+    _applyFilterAndSearch();
     saveTasks();
     notifyListeners();
   }
@@ -44,7 +48,31 @@ class TaskProvider extends ChangeNotifier {
   void deleteTask(int index) {
     if (index >= 0 && index < _tasks.length) {
       _tasks.removeAt(index);
-      searchTasks(_searchQuery); // Reapply search filter after deletion
+      _applyFilterAndSearch();
+      saveTasks();
+      notifyListeners();
+    }
+  }
+
+  void updateTask(Task updatedTask, int index) {
+    if (index >= 0 && index < _tasks.length) {
+      _tasks[index] = updatedTask;
+      _applyFilterAndSearch();
+      saveTasks();
+      notifyListeners();
+    }
+  }
+
+  void toggleCompleteTask(int index) {
+    if (index >= 0 && index < _tasks.length) {
+      _tasks[index] = Task(
+        title: _tasks[index].title,
+        description: _tasks[index].description,
+        priority: _tasks[index].priority,
+        completed: !_tasks[index].completed,
+        deadline: _tasks[index].deadline,
+      );
+      _applyFilterAndSearch();
       saveTasks();
       notifyListeners();
     }
@@ -60,7 +88,7 @@ class TaskProvider extends ChangeNotifier {
         }
       }
     }
-    searchTasks(_searchQuery); // Reapply search filter after sorting
+    _applyFilterAndSearch();
     notifyListeners();
   }
 
@@ -74,36 +102,50 @@ class TaskProvider extends ChangeNotifier {
         }
       }
     }
-    searchTasks(_searchQuery); // Reapply search filter after sorting
+    _applyFilterAndSearch();
     notifyListeners();
   }
 
-  void updateTask(Task updatedTask, int index) {
-    if (index >= 0 && index < _tasks.length) {
-      _tasks[index] = updatedTask;
-      searchTasks(_searchQuery); // Reapply search filter after update
-      saveTasks();
-      notifyListeners();
-    }
+  void filterTasks(TaskFilter filter) {
+    _currentFilter = filter;
+    _applyFilterAndSearch();
+    notifyListeners();
   }
 
   void searchTasks(String query) {
     _searchQuery = query;
-    if (query.isEmpty) {
-      _filteredTasks = List.from(_tasks); // Show all tasks if query is empty
-    } else {
-      _filteredTasks =
-          _tasks
-              .asMap()
-              .entries
+    _applyFilterAndSearch();
+    notifyListeners();
+  }
+
+  void _applyFilterAndSearch() {
+    List<Task> tempTasks = List.from(_tasks);
+
+    // Apply status filter
+    switch (_currentFilter) {
+      case TaskFilter.completed:
+        tempTasks = tempTasks.where((task) => task.completed).toList();
+        break;
+      case TaskFilter.pending:
+        tempTasks = tempTasks.where((task) => !task.completed).toList();
+        break;
+      case TaskFilter.all:
+      default:
+        break;
+    }
+
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      tempTasks =
+          tempTasks
               .where(
-                (entry) => entry.value.title.toLowerCase().contains(
-                  query.toLowerCase(),
+                (task) => task.title.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
                 ),
               )
-              .map((entry) => entry.value)
               .toList();
     }
-    notifyListeners();
+
+    _filteredTasks = tempTasks;
   }
 }
