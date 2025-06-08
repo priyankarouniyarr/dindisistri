@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:student_task_tracker/screen/settings.dart';
 import 'package:student_task_tracker/screen/calebndra.dart';
 import 'package:student_task_tracker/screen/home_screen.dart';
 import 'package:student_task_tracker/screen/taskscheduleScreen.dart';
@@ -14,12 +13,7 @@ class AppMainScreen extends StatefulWidget {
 class _AppMainScreenState extends State<AppMainScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> pages = [
-    HomeScreen(),
-    Taskschedulescreen(),
-    Calebndra(),
-    Settings(),
-  ];
+  final List<Widget> pages = [HomeScreen(), Taskschedulescreen(), Calebndra()];
 
   void _onItemTapped(int index) {
     setState(() {
@@ -127,28 +121,6 @@ class _AppMainScreenState extends State<AppMainScreen> {
                   ),
                 ),
                 label: "Calendra",
-              ),
-
-              BottomNavigationBarItem(
-                icon: Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color:
-                        _selectedIndex == 3
-                            ? Theme.of(
-                              context,
-                            ).colorScheme.primary.withOpacity(0.2)
-                            : Colors.transparent,
-                  ),
-                  child: Icon(
-                    _selectedIndex == 2
-                        ? Icons.settings
-                        : Icons.settings_outlined,
-                    size: 24,
-                  ),
-                ),
-                label: "Setting",
               ),
             ],
           ),

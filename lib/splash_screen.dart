@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:student_task_tracker/screen/home_screen.dart';
+import 'package:student_task_tracker/screen/onboardscreen.dart';
 import 'package:student_task_tracker/screen/appmain_Screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -24,9 +24,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Navigate to next screen after delay
     Timer(Duration(seconds: 5), () {
-      Navigator.of(
-        context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => AppMainScreen()));
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => CustomOnboardScreen()),
+      );
     });
   }
 
@@ -37,8 +37,8 @@ class _SplashScreenState extends State<SplashScreen> {
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              Color.fromARGB(255, 54, 114, 235),
-              Color.fromARGB(255, 46, 191, 248),
+              Color.fromARGB(255, 120, 81, 176),
+              Color.fromARGB(255, 81, 26, 190),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,

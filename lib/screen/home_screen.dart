@@ -1,9 +1,14 @@
-import '../widgets/task_tile.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:student_task_tracker/models/tasks.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:student_task_tracker/screen/categories.dart';
+import 'package:student_task_tracker/widgets/task_tile.dart';
+import 'package:student_task_tracker/utilis/googlefonts.dart';
+import 'package:student_task_tracker/widgets/custom_drawer.dart';
 import 'package:student_task_tracker/providers/task_provider.dart';
 import 'package:student_task_tracker/providers/theme_provider.dart';
+import 'package:student_task_tracker/providers/language_font_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -14,6 +19,10 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+  final TextEditingController _searchController = TextEditingController();
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
+  String _speechField = 'title';
 
   @override
   void initState() {
@@ -21,6 +30,39 @@ class _HomeScreenState extends State<HomeScreen> {
     Future.delayed(Duration.zero, () {
       context.read<TaskProvider>().loadTasks();
     });
+    _searchController.addListener(() {
+      context.read<TaskProvider>().searchTasks(_searchController.text);
+    });
+    _initializeSpeech();
+  }
+
+  void _initializeSpeech() async {
+    bool available = await _speech.initialize(
+      onStatus:
+          (status) => setState(() => _isListening = status == 'listening'),
+      onError:
+          (error) => ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could Not Initialize Speech Recognition'),
+              backgroundColor: Colors.redAccent,
+            ),
+          ),
+    );
+    if (!available) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Speech recognition not available'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _speech.stop();
+    super.dispose();
   }
 
   void showTaskDialog({Task? task, int? index}) {
@@ -28,6 +70,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final descCtrl = TextEditingController(text: task?.description ?? '');
     int selectedPriority = task?.priority ?? 1;
     DateTime selectedDate = task?.deadline ?? DateTime.now();
+    final languageProvider = Provider.of<LanguageFontProvider>(
+      context,
+      listen: false,
+    );
 
     showDialog(
       context: context,
@@ -41,7 +87,6 @@ class _HomeScreenState extends State<HomeScreen> {
               borderRadius: BorderRadius.circular(20),
             ),
             backgroundColor: Theme.of(context).cardColor,
-
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: StatefulBuilder(
@@ -64,7 +109,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 style: Theme.of(
                                   context,
                                 ).textTheme.headlineSmall?.copyWith(
-                                  fontFamily: 'Poppins',
+                                  fontFamily:
+                                      googleFontOptions[languageProvider
+                                              .selectedFont]!()
+                                          .fontFamily,
                                   fontWeight: FontWeight.bold,
                                   color:
                                       Theme.of(context).colorScheme.onSurface,
@@ -73,36 +121,92 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          TextField(
-                            controller: titleCtrl,
-                            decoration: InputDecoration(
-                              labelText: 'Title',
-                              filled: true,
-                              fillColor:
-                                  Theme.of(context).colorScheme.surfaceVariant,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: titleCtrl,
+                                  decoration: InputDecoration(
+                                    labelText: 'Title',
+                                    filled: true,
+                                    fillColor:
+                                        Theme.of(
+                                          context,
+                                        ).colorScheme.surfaceVariant,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                  ),
+                                  style: TextStyle(
+                                    fontFamily:
+                                        googleFontOptions[languageProvider
+                                                .selectedFont]!()
+                                            .fontFamily,
+                                  ),
+                                ),
                               ),
-                            ),
-                            style: const TextStyle(fontFamily: 'Poppins'),
+                              IconButton(
+                                icon: Icon(
+                                  _isListening && _speechField == 'title'
+                                      ? Icons.mic
+                                      : Icons.mic_none,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                onPressed:
+                                    () => _startListening(
+                                      titleCtrl,
+                                      setState,
+                                      'title',
+                                    ),
+                                tooltip: 'Dictate Title',
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
-                          TextField(
-                            controller: descCtrl,
-                            maxLines: 3,
-                            decoration: InputDecoration(
-                              labelText: 'Description',
-                              filled: true,
-                              fillColor:
-                                  Theme.of(context).colorScheme.surfaceVariant,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: descCtrl,
+                                  maxLines: 3,
+                                  decoration: InputDecoration(
+                                    labelText: 'Description',
+                                    filled: true,
+                                    fillColor:
+                                        Theme.of(
+                                          context,
+                                        ).colorScheme.surfaceVariant,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    alignLabelWithHint: true,
+                                  ),
+                                  style: TextStyle(
+                                    fontFamily:
+                                        googleFontOptions[languageProvider
+                                                .selectedFont]!()
+                                            .fontFamily,
+                                  ),
+                                ),
                               ),
-                              alignLabelWithHint: true,
-                            ),
-                            style: const TextStyle(fontFamily: 'Poppins'),
+                              IconButton(
+                                icon: Icon(
+                                  _isListening && _speechField == 'description'
+                                      ? Icons.mic
+                                      : Icons.mic_none,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                onPressed:
+                                    () => _startListening(
+                                      descCtrl,
+                                      setState,
+                                      'description',
+                                    ),
+                                tooltip: 'Dictate Description',
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
                           DropdownButtonFormField<int>(
@@ -117,26 +221,41 @@ class _HomeScreenState extends State<HomeScreen> {
                                 borderSide: BorderSide.none,
                               ),
                             ),
-                            items: const [
+                            items: [
                               DropdownMenuItem(
                                 value: 1,
                                 child: Text(
                                   'High',
-                                  style: TextStyle(fontFamily: 'Poppins'),
+                                  style: TextStyle(
+                                    fontFamily:
+                                        googleFontOptions[languageProvider
+                                                .selectedFont]!()
+                                            .fontFamily,
+                                  ),
                                 ),
                               ),
                               DropdownMenuItem(
                                 value: 2,
                                 child: Text(
                                   'Medium',
-                                  style: TextStyle(fontFamily: 'Poppins'),
+                                  style: TextStyle(
+                                    fontFamily:
+                                        googleFontOptions[languageProvider
+                                                .selectedFont]!()
+                                            .fontFamily,
+                                  ),
                                 ),
                               ),
                               DropdownMenuItem(
                                 value: 3,
                                 child: Text(
                                   'Low',
-                                  style: TextStyle(fontFamily: 'Poppins'),
+                                  style: TextStyle(
+                                    fontFamily:
+                                        googleFontOptions[languageProvider
+                                                .selectedFont]!()
+                                            .fontFamily,
+                                  ),
                                 ),
                               ),
                             ],
@@ -180,7 +299,10 @@ class _HomeScreenState extends State<HomeScreen> {
                             label: Text(
                               "Deadline: ${selectedDate.toLocal().toString().split(' ')[0]}",
                               style: TextStyle(
-                                fontFamily: 'Poppins',
+                                fontFamily:
+                                    googleFontOptions[languageProvider
+                                            .selectedFont]!()
+                                        .fontFamily,
                                 color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             ),
@@ -202,11 +324,17 @@ class _HomeScreenState extends State<HomeScreen> {
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               TextButton(
-                                onPressed: () => Navigator.pop(context),
+                                onPressed: () {
+                                  _speech.stop();
+                                  Navigator.pop(context);
+                                },
                                 child: Text(
                                   'Cancel',
                                   style: TextStyle(
-                                    fontFamily: 'Poppins',
+                                    fontFamily:
+                                        googleFontOptions[languageProvider
+                                                .selectedFont]!()
+                                            .fontFamily,
                                     color:
                                         Theme.of(context).colorScheme.secondary,
                                   ),
@@ -219,19 +347,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                       descCtrl.text.trim().isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
-                                        content: const Text(
+                                        content: Text(
                                           'Title and description are required!',
                                           style: TextStyle(
-                                            fontFamily: 'Poppins',
+                                            fontFamily:
+                                                googleFontOptions[languageProvider
+                                                        .selectedFont]!()
+                                                    .fontFamily,
                                           ),
                                         ),
                                         backgroundColor: Colors.redAccent,
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
                                       ),
                                     );
                                     return;
@@ -245,11 +370,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                   );
 
                                   if (task != null && index != null) {
-                                    context.read<TaskProvider>().updateTask(
-                                      newTask,
-                                      index,
-                                    );
-                                    _listKey.currentState?.setState(() {});
+                                    final originalIndex = context
+                                        .read<TaskProvider>()
+                                        .tasks
+                                        .indexOf(task);
+                                    if (originalIndex != -1) {
+                                      context.read<TaskProvider>().updateTask(
+                                        newTask,
+                                        originalIndex,
+                                      );
+                                    }
                                   } else {
                                     context.read<TaskProvider>().addTask(
                                       newTask,
@@ -266,6 +396,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                     );
                                   }
 
+                                  _speech.stop();
                                   Navigator.pop(context);
                                 },
                                 style: ElevatedButton.styleFrom(
@@ -283,7 +414,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Text(
                                   task != null ? 'Save' : 'Add',
                                   style: TextStyle(
-                                    fontFamily: 'Poppins',
+                                    fontFamily:
+                                        googleFontOptions[languageProvider
+                                                .selectedFont]!()
+                                            .fontFamily,
                                     color:
                                         Theme.of(context).colorScheme.onPrimary,
                                   ),
@@ -300,22 +434,62 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _startListening(
+    TextEditingController controller,
+    StateSetter setState,
+    String field,
+  ) {
+    if (_isListening && _speechField == field) {
+      _speech.stop();
+      setState(() => _isListening = false);
+    } else {
+      _speechField = field;
+      _speech.listen(
+        onResult: (result) {
+          setState(() {
+            controller.text = result.recognizedWords;
+            if (result.finalResult) {
+              _isListening = false;
+            }
+          });
+        },
+        localeId: 'en_US',
+      );
+      setState(() => _isListening = true);
+    }
+  }
+
   void _handleDelete(int index, Task task) {
+    final provider = context.read<TaskProvider>();
+    final originalIndex = provider.tasks.indexOf(task);
+    if (originalIndex == -1) return;
+
     final removedTask = task;
-    context.read<TaskProvider>().deleteTask(index);
-    _listKey.currentState?.removeItem(
-      index,
-      (context, animation) => SizeTransition(
-        sizeFactor: animation,
-        child: TaskTile(task: removedTask, onDelete: () {}, onEdit: () {}),
-      ),
-      duration: const Duration(milliseconds: 300),
-    );
+    provider.deleteTask(originalIndex);
+
+    if (index < _listKey.currentState!.widget.initialItemCount) {
+      _listKey.currentState?.removeItem(
+        index,
+        (context, animation) => SizeTransition(
+          sizeFactor: animation,
+          child: TaskTile(task: removedTask, onDelete: () {}, onEdit: () {}),
+        ),
+        duration: const Duration(milliseconds: 300),
+      );
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           'Task "${removedTask.title}" deleted',
-          style: const TextStyle(fontFamily: 'Poppins'),
+          style: TextStyle(
+            fontFamily:
+                googleFontOptions[Provider.of<LanguageFontProvider>(
+                      context,
+                      listen: false,
+                    ).selectedFont]!()
+                    .fontFamily,
+          ),
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         behavior: SnackBarBehavior.floating,
@@ -324,9 +498,9 @@ class _HomeScreenState extends State<HomeScreen> {
           label: 'Undo',
           textColor: Colors.white,
           onPressed: () {
-            context.read<TaskProvider>().addTask(removedTask);
+            provider.addTask(removedTask);
             _listKey.currentState?.insertItem(
-              index,
+              originalIndex,
               duration: const Duration(milliseconds: 300),
             );
           },
@@ -339,14 +513,16 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final provider = context.watch<TaskProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final languageProvider = Provider.of<LanguageFontProvider>(context);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text(
-          'My Tasks',
+        title: Text(
+          'My Todo List',
           style: TextStyle(
-            fontFamily: 'Poppins',
+            fontFamily:
+                googleFontOptions[languageProvider.selectedFont]!().fontFamily,
             fontWeight: FontWeight.bold,
             fontSize: 24,
           ),
@@ -364,43 +540,16 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => context.read<ThemeProvider>().toggleTheme(),
             tooltip: 'Toggle Theme',
           ),
-          PopupMenuButton<String>(
-            icon: Icon(
-              Icons.sort,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            onSelected: (value) {
-              if (value == 'priority') {
-                provider.sortTasksByPriority();
-              } else if (value == 'deadline') {
-                provider.sortTasksByDeadline();
-              }
-              _listKey.currentState?.setState(() {});
-            },
-            itemBuilder:
-                (_) => [
-                  const PopupMenuItem(
-                    value: 'priority',
-                    child: Text(
-                      'Sort by Priority',
-                      style: TextStyle(fontFamily: 'Poppins'),
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'deadline',
-                    child: Text(
-                      'Sort by Deadline',
-                      style: TextStyle(fontFamily: 'Poppins'),
-                    ),
-                  ),
-                ],
-          ),
         ],
+      ),
+      drawer: CustomDrawer(
+        selectedFont: languageProvider.selectedFont,
+        onFontChanged: languageProvider.setFont,
       ),
       body: SafeArea(
         child: Column(
           children: [
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Container(
               height: 300,
               width: double.infinity,
@@ -410,14 +559,44 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Image.asset(
-                  'assets/images/flat-lay-notebook-with-list-desk.jpg',
+                  'assets/images/picture1.png',
                   fit: BoxFit.cover,
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
-
+            Padding(
+              padding: const EdgeInsets.only(left: 20.0, right: 9.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: InputDecoration(
+                        hintText: 'Search by title...',
+                        prefixIcon: Icon(Icons.search),
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 0,
+                          horizontal: 5,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontFamily:
+                            googleFontOptions[languageProvider.selectedFont]!()
+                                .fontFamily,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 10),
+                  Categories(context, provider, languageProvider),
+                  const SizedBox(width: 10),
+                ],
+              ),
+            ),
             Expanded(
               child:
                   provider.tasks.isEmpty
@@ -436,7 +615,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               style: Theme.of(
                                 context,
                               ).textTheme.bodyLarge?.copyWith(
-                                fontFamily: 'Poppins',
+                                fontFamily:
+                                    googleFontOptions[languageProvider
+                                            .selectedFont]!()
+                                        .fontFamily,
                                 color: Colors.grey[600],
                                 fontSize: 18,
                               ),
@@ -449,6 +631,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.all(16),
                         initialItemCount: provider.tasks.length,
                         itemBuilder: (context, index, animation) {
+                          if (index >= provider.tasks.length)
+                            return const SizedBox.shrink();
                           final task = provider.tasks[index];
                           return SlideTransition(
                             position: Tween<Offset>(
@@ -515,7 +699,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: const Icon(Icons.add),
           backgroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
           foregroundColor: Theme.of(context).colorScheme.onPrimary,
-          shape: CircleBorder(),
+          shape: const CircleBorder(),
           elevation: 4,
         ),
       ),
